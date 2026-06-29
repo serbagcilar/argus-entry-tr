@@ -1,5 +1,5 @@
-yfinance
-pandas-ta>=0.4.67b0
-pandas
-numpy
+yfinance==0.2.40
+pandas-ta
+pandas==2.1.4
+numpy==1.26.4
 requests
