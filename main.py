@@ -33,22 +33,22 @@ INTERVAL    = 900  # 15 dakika
 # ============================================================
 def fetch_15m(symbol, days=5):
     try:
-        ticker = f"{symbol}.IS"
-        df = yf.download(ticker, period=f"{days}d", interval="15m", progress=False)
+        ticker = yf.Ticker(f"{symbol}.IS")
+        df = ticker.history(period=f"{days}d", interval="15m")
         if df is None or len(df) < 30: return None
-        df.columns = [c[0] if isinstance(c, tuple) else c for c in df.columns]
-        return df[["Open","High","Low","Close","Volume"]].astype(float)
+        df = df[["Open","High","Low","Close","Volume"]].astype(float)
+        return df
     except Exception as e:
         print(f"  15M fetch hatasi {symbol}: {e}")
         return None
 
 def fetch_d1(symbol, days=300):
     try:
-        ticker = f"{symbol}.IS" if symbol != "XU100" else "XU100.IS"
-        df = yf.download(ticker, period=f"{days}d", interval="1d", progress=False)
+        ticker = yf.Ticker(f"{symbol}.IS" if symbol != "XU100" else "XU100.IS")
+        df = ticker.history(period=f"{days}d", interval="1d")
         if df is None or len(df) < 50: return None
-        df.columns = [c[0] if isinstance(c, tuple) else c for c in df.columns]
-        return df[["Open","High","Low","Close","Volume"]].astype(float)
+        df = df[["Open","High","Low","Close","Volume"]].astype(float)
+        return df
     except Exception as e:
         print(f"  D1 fetch hatasi {symbol}: {e}")
         return None
