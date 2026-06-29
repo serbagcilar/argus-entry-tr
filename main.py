@@ -378,18 +378,8 @@ def run_scan():
 
     del bench_d1
     gc.collect()
-
 # ============================================================
 # ANA DÖNGÜ
 # ============================================================
-print("ARGUS ENTRY TR başlatıldı — 7/24 aktif")
-send_telegram("🤖 <b>ARGUS ENTRY TR başlatıldı</b>\n7/24 aktif | 15dk tarama")
-
-while True:
-    try:
-        run_scan()
-    except Exception as e:
-        print(f"DÖNGÜ HATA: {e}")
-        send_telegram(f"⚠️ ARGUS ENTRY TR hata: {e}")
-    print(f"⏳ {INTERVAL//60} dakika bekleniyor...")
-    time.sleep(INTERVAL)
+print("ARGUS ENTRY TR başlatıldı")
+run_scan()
