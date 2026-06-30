@@ -247,7 +247,7 @@ def calculate_jma_score(df, tf_minutes=385, fast=3, slow=5, c=1):
     p=jma_s/close; p2=p/-1; z=(p2-p)+2; x=z*100
     x1=(x.rolling(fast).mean()+x.rolling(slow).mean()).rolling(c).mean()
     if x1.empty or np.isnan(x1.iloc[-1]): return 0,"BLUE"
-    return (20,"WHITE") if x1.iloc[-1]>=0 else (0,"BLUE")
+    return (10,"WHITE") if x1.iloc[-1]>=0 else (0,"BLUE")
 
 # ============================================================
 # KRİTER 5: AEC (max 10p)
@@ -287,7 +287,7 @@ def calculate_dema100_score(df):
     close=df["Close"]; e1=close.ewm(span=100,adjust=False).mean()
     dema=2*e1-e1.ewm(span=100,adjust=False).mean()
     above=bool(close.iloc[-1]>dema.iloc[-1])
-    return (10,True) if above else (0,False)
+    return (20,True) if above else (0,False)
 
 # ============================================================
 # D1 ZONE
