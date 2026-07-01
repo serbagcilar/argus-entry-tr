@@ -29,12 +29,12 @@ STRONG_ESIK = 70
 INTERVAL    = 900  # 15 dakika
 
 # ============================================================
-# FETCH
+# FETCH (timeout eklendi - asili kalma sorununu onler)
 # ============================================================
 def fetch_15m(symbol, days=5):
     try:
         ticker = yf.Ticker(f"{symbol}.IS")
-        df = ticker.history(period=f"{days}d", interval="15m")
+        df = ticker.history(period=f"{days}d", interval="15m", timeout=10)
         if df is None or len(df) < 30: return None
         df = df[["Open","High","Low","Close","Volume"]].astype(float)
         return df
@@ -45,7 +45,7 @@ def fetch_15m(symbol, days=5):
 def fetch_d1(symbol, days=300):
     try:
         ticker = yf.Ticker(f"{symbol}.IS" if symbol != "XU100" else "XU100.IS")
-        df = ticker.history(period=f"{days}d", interval="1d")
+        df = ticker.history(period=f"{days}d", interval="1d", timeout=10)
         if df is None or len(df) < 50: return None
         df = df[["Open","High","Low","Close","Volume"]].astype(float)
         return df
@@ -371,13 +371,13 @@ def run_scan():
                        f"{now.strftime('%H:%M')} TR | ARGUS ENTRY TR")
                 send_telegram(msg)
 
-            # RAM temizle
             del df_15m, df_d1
         except Exception as e:
             print(f"  HATA {ticker}: {e}")
 
     del bench_d1
     gc.collect()
+
 # ============================================================
 # ANA DÖNGÜ
 # ============================================================
