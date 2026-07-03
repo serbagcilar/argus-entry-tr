@@ -16,11 +16,19 @@ TELEGRAM_CHAT_ID   = os.environ.get("TELEGRAM_CHAT_ID")
 
 TICKERS = [
     ("TAVHL", "Havacılık"),
-    ("PAMEL", "Savunma"),
+    ("ekgyo", "Savunma"),
     ("THYAO", "Havacılık"),
     ("SISE",  "Cam / Holding"),
     ("ASELS", "Savunma"),
-    ("EFOR",  "Fintech"),
+    ("TUPRS",  "Fintech"),
+    ("MIATK",  "Fintech"),
+    ("ARSAN",  "Fintech"),
+    ("ARDYZ",  "Fintech"),
+    ("FROTO",  "Fintech"),
+    ("HEKTS",  "Fintech"),
+    ("EREGL",  "Fintech"),
+    ("PEKGYO",  "Fintech"),
+    ("DAPGM",  "Fintech"),
 ]
 
 BENCHMARK   = "XU100.IS"
@@ -54,7 +62,7 @@ def fetch_d1(symbol, days=300):
         return None
 
 # ============================================================
-# KRİTER 1: VR x YON (max 20p)
+# KRİTER 1: VR x YON (max 15p)  <-- 20p'den 15p'ye çekildi
 # ============================================================
 def calculate_vr_score(df, vr_len=50):
     if len(df) < vr_len + 5: return 0, None, "Unknown"
@@ -78,7 +86,7 @@ def calculate_vr_score(df, vr_len=50):
     yon_yukari = dema.iloc[-1] > dema.iloc[-3] and close.iloc[-1] > dema.iloc[-1]
 
     VR_MATRIX = {
-        "Strong Trending":  {"up": +20, "down": -20},
+        "Strong Trending":  {"up": +15, "down": -15},
         "Mild Trending":    {"up": +10, "down": -10},
         "Random":           {"up":   0, "down":   0},
         "Mild Reverting":   {"up": -10, "down": -10},
@@ -230,7 +238,7 @@ def calculate_aei_score(df, bench_df,
     except: return 10,"ARMED"
 
 # ============================================================
-# KRİTER 4: JMA Filter (max 20p)
+# KRİTER 4: JMA Filter (max 10p)  <-- 20p'den 10p'ye çekildi
 # ============================================================
 def calculate_jma_score(df, tf_minutes=385, fast=3, slow=5, c=1):
     if len(df)<50: return 0,"BLUE"
@@ -280,14 +288,29 @@ def calculate_aec_score(df, rsi_len=100, sup_len=50, ott_mult=0.2):
     except: return 0,"SHORT"
 
 # ============================================================
-# KRİTER 6: DEMA100 (max 10p)
+# KRİTER 6: DEMA100 (max 10p)  <-- 20p'den 10p'ye çekildi
 # ============================================================
 def calculate_dema100_score(df):
     if len(df)<110: return 0,False
     close=df["Close"]; e1=close.ewm(span=100,adjust=False).mean()
     dema=2*e1-e1.ewm(span=100,adjust=False).mean()
     above=bool(close.iloc[-1]>dema.iloc[-1])
-    return (20,True) if above else (0,False)
+    return (10,True) if above else (0,False)
+
+# ============================================================
+# KRİTER 7: MFI (max 15p)  <-- YENİ - cat bounce filtresi
+# 15M'de length=100 (~25 saatlik pencere), DEMA100 ile aynı
+# HTF-benzeri stabilite mantığı, kısa TF whipsaw'ı azaltır
+# ============================================================
+def calculate_mfi_score(df, length=100):
+    if len(df) < length + 5: return 0, None
+    try:
+        mfi = ta.mfi(df["High"], df["Low"], df["Close"], df["Volume"], length=length)
+        if mfi is None or mfi.empty or np.isnan(mfi.iloc[-1]): return 0, None
+        mfi_val = round(float(mfi.iloc[-1]), 2)
+        return (15, mfi_val) if mfi_val > 50 else (-15, mfi_val)
+    except Exception:
+        return 0, None
 
 # ============================================================
 # D1 ZONE
@@ -326,6 +349,7 @@ def run_scan():
     now   = datetime.now(tz_tr)
     print(f"\n{'='*65}")
     print(f"ARGUS ENTRY TR — {now.strftime('%Y-%m-%d %H:%M')} TR")
+    print(f"Skorlama v2: VR15 SMC20 AEI20 JMA10 AEC10 DEMA10 MFI15 = 100p")
     print(f"{'='*65}")
 
     bench_d1 = fetch_d1("XU100")
@@ -346,15 +370,17 @@ def run_scan():
             s4, jma_color       = calculate_jma_score(df_15m)
             s5, aec_status      = calculate_aec_score(df_15m)
             s6, dema_above      = calculate_dema100_score(df_15m)
+            s7, mfi_val         = calculate_mfi_score(df_15m)
 
-            total = s1+s2+s3+s4+s5+s6
+            total = s1+s2+s3+s4+s5+s6+s7
             price = round(float(df_15m["Close"].iloc[-1]), 2)
 
             if   total >= STRONG_ESIK: signal = "STRONG BUY"
             elif total >= BUY_ESIK:    signal = "BUY"
             else:                      signal = "BEKLE"
 
-            print(f"  Skor:{total}/100 | {signal}")
+            mfi_str = f"{mfi_val:.1f}" if mfi_val is not None else "N/A"
+            print(f"  Skor:{total}/100 | {signal} | MFI:{mfi_str}")
 
             if total >= BUY_ESIK:
                 emoji = "🔥 STRONG BUY" if total >= STRONG_ESIK else "✅ BUY"
@@ -367,7 +393,8 @@ def run_scan():
                        f"AEI: {s3:+d}p ({aei_status})\n"
                        f"JMA: {s4:+d}p ({jma_color})\n"
                        f"AEC: {s5:+d}p ({aec_status})\n"
-                       f"DEMA100: {s6:+d}p\n\n"
+                       f"DEMA100: {s6:+d}p\n"
+                       f"MFI100: {s7:+d}p ({mfi_str})\n\n"
                        f"{now.strftime('%H:%M')} TR | ARGUS ENTRY TR")
                 send_telegram(msg)
 
@@ -381,5 +408,5 @@ def run_scan():
 # ============================================================
 # ANA DÖNGÜ
 # ============================================================
-print("ARGUS ENTRY TR başlatıldı")
+print("ARGUS ENTRY TR v2 başlatıldı")
 run_scan()
