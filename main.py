@@ -32,12 +32,12 @@ TICKERS = [
 ]
 
 BENCHMARK   = "XU100.IS"
-BUY_ESIK    = 50
-STRONG_ESIK = 70
+BUY_ESIK    = 50   # 50 <= skor < 65  -> WEAK BUY
+STRONG_ESIK = 65   # skor >= 65       -> STRONG BUY
 INTERVAL    = 900  # 15 dakika
 
 # ============================================================
-# FETCH (timeout eklendi - asili kalma sorununu onler)
+# FETCH (timeout + yarim bar fix)
 # ============================================================
 def fetch_15m(symbol, days=5):
     try:
@@ -45,6 +45,18 @@ def fetch_15m(symbol, days=5):
         df = ticker.history(period=f"{days}d", interval="15m", timeout=10)
         if df is None or len(df) < 30: return None
         df = df[["Open","High","Low","Close","Volume"]].astype(float)
+
+        # Son bar henuz kapanmamissa at (yarim bar sorunu - AEC/JMA gibi
+        # dar bantli kriterler forming candle'a asiri hassas)
+        now_utc = pd.Timestamp.now(tz="UTC")
+        last_index = df.index[-1]
+        if last_index.tzinfo is None:
+            last_index = last_index.tz_localize("UTC")
+        last_bar_end = last_index + pd.Timedelta(minutes=15)
+        if last_bar_end > now_utc:
+            df = df.iloc[:-1]
+
+        if len(df) < 30: return None
         return df
     except Exception as e:
         print(f"  15M fetch hatasi {symbol}: {e}")
@@ -62,7 +74,7 @@ def fetch_d1(symbol, days=300):
         return None
 
 # ============================================================
-# KRİTER 1: VR x YON (max 15p)  <-- 20p'den 15p'ye çekildi
+# KRİTER 1: VR x YON (max 15p)
 # ============================================================
 def calculate_vr_score(df, vr_len=50):
     if len(df) < vr_len + 5: return 0, None, "Unknown"
@@ -238,7 +250,7 @@ def calculate_aei_score(df, bench_df,
     except: return 10,"ARMED"
 
 # ============================================================
-# KRİTER 4: JMA Filter (max 10p)  <-- 20p'den 10p'ye çekildi
+# KRİTER 4: JMA Filter (max 10p)
 # ============================================================
 def calculate_jma_score(df, tf_minutes=385, fast=3, slow=5, c=1):
     if len(df)<50: return 0,"BLUE"
@@ -288,7 +300,7 @@ def calculate_aec_score(df, rsi_len=100, sup_len=50, ott_mult=0.2):
     except: return 0,"SHORT"
 
 # ============================================================
-# KRİTER 6: DEMA100 (max 10p)  <-- 20p'den 10p'ye çekildi
+# KRİTER 6: DEMA100 (max 10p)
 # ============================================================
 def calculate_dema100_score(df):
     if len(df)<110: return 0,False
@@ -298,7 +310,7 @@ def calculate_dema100_score(df):
     return (10,True) if above else (0,False)
 
 # ============================================================
-# KRİTER 7: MFI (max 15p)  <-- YENİ - cat bounce filtresi
+# KRİTER 7: MFI (max 15p) - cat bounce filtresi
 # 15M'de length=100 (~25 saatlik pencere), DEMA100 ile aynı
 # HTF-benzeri stabilite mantığı, kısa TF whipsaw'ı azaltır
 # ============================================================
@@ -349,7 +361,8 @@ def run_scan():
     now   = datetime.now(tz_tr)
     print(f"\n{'='*65}")
     print(f"ARGUS ENTRY TR — {now.strftime('%Y-%m-%d %H:%M')} TR")
-    print(f"Skorlama v2: VR15 SMC20 AEI20 JMA10 AEC10 DEMA10 MFI15 = 100p")
+    print(f"Skorlama v3: VR15 SMC20 AEI20 JMA10 AEC10 DEMA10 MFI15 = 100p")
+    print(f"Etiket: 50<=skor<65 WEAK BUY | skor>=65 STRONG BUY")
     print(f"{'='*65}")
 
     bench_d1 = fetch_d1("XU100")
@@ -376,14 +389,14 @@ def run_scan():
             price = round(float(df_15m["Close"].iloc[-1]), 2)
 
             if   total >= STRONG_ESIK: signal = "STRONG BUY"
-            elif total >= BUY_ESIK:    signal = "BUY"
+            elif total >= BUY_ESIK:    signal = "WEAK BUY"
             else:                      signal = "BEKLE"
 
             mfi_str = f"{mfi_val:.1f}" if mfi_val is not None else "N/A"
             print(f"  Skor:{total}/100 | {signal} | MFI:{mfi_str}")
 
             if total >= BUY_ESIK:
-                emoji = "🔥 STRONG BUY" if total >= STRONG_ESIK else "✅ BUY"
+                emoji = "🔥 STRONG BUY" if total >= STRONG_ESIK else "✅ WEAK BUY"
                 msg = (f"<b>{emoji} — {ticker}</b>\n"
                        f"Fiyat: <b>{price} TL</b>\n"
                        f"Skor: <b>{total}/100</b>\n"
@@ -408,5 +421,5 @@ def run_scan():
 # ============================================================
 # ANA DÖNGÜ
 # ============================================================
-print("ARGUS ENTRY TR v2 başlatıldı")
+print("ARGUS ENTRY TR v3 başlatıldı")
 run_scan()
