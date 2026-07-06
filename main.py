@@ -15,19 +15,10 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID   = os.environ.get("TELEGRAM_CHAT_ID")
 
 TICKERS = [
-    ("TAVHL", "Havacılık"),
-    ("ekgyo", "Savunma"),
-    ("THYAO", "Havacılık"),
-    ("SISE",  "Cam / Holding"),
-    ("ASELS", "Savunma"),
-    ("TUPRS",  "Fintech"),
-    ("MIATK",  "Fintech"),
-    ("ARSAN",  "Fintech"),
-    ("ARDYZ",  "Fintech"),
-    ("FROTO",  "Fintech"),
-    ("HEKTS",  "Fintech"),
-    ("EREGL",  "Fintech"),
-    ("PEKGYO",  "Fintech"),
+    ("TAVHL", "Havacılık"), ("EKGYO", "Savunma"), ("THYAO", "Havacılık"), ("SISE",  "Cam / Holding"), ("ASELS", "Savunma"),
+    ("TUPRS",  "Fintech"), ("TTRAK",  "Fintech"), ("PAPIL",  "SAVUNMA"), ("SKTAS",  "TEKSTIL"), ("FROTO",  "Fintech"),
+    ("HEKTS",  "Fintech"), ("KTSKR", "GIDA/SEKER"), ("ENERY", "ENERJİ"), ("EDATA", "TEKNOLOJİ"), ("NUHCM", "CIMENTO"),
+    ("EREGL",  "Fintech"), ("TGSAS", "GAZ"), ("BANVT", "GIDA"), ("BOBET", "TEKSTİL"), ("SNICA", "METAL"), ("GENIL", "TICARET"),
     ("DAPGM",  "Fintech"),
 ]
 
