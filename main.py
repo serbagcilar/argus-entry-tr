@@ -17,9 +17,9 @@ TELEGRAM_CHAT_ID   = os.environ.get("TELEGRAM_CHAT_ID")
 TICKERS = [
     ("TAVHL", "Havacılık"), ("EKGYO", "Savunma"), ("THYAO", "Havacılık"), ("SISE",  "Cam / Holding"), ("ASELS", "Savunma"),
     ("TUPRS",  "Fintech"), ("TTRAK",  "Fintech"), ("PAPIL",  "SAVUNMA"), ("SKTAS",  "TEKSTIL"), ("FROTO",  "Fintech"),
-    ("HEKTS",  "Fintech"), ("KTSKR", "GIDA/SEKER"), ("ENERY", "ENERJİ"), ("EDATA", "TEKNOLOJİ"), ("NUHCM", "CIMENTO"),
+    ("HEKTS",  "Fintech"), ("KTSKR", "GIDA/SEKER"), ("EDATA", "TEKNOLOJİ"), ("NUHCM", "CIMENTO"),
     ("EREGL",  "Fintech"), ("TGSAS", "GAZ"), ("BANVT", "GIDA"), ("BOBET", "TEKSTİL"), ("SNICA", "METAL"), ("GENIL", "TICARET"),
-    ("DAPGM",  "Fintech"),
+    ("DAPGM",  "Fintech"), ("PRKME", "TİCARET"), ("SNGYO", "GYO"), ("BIOEN", "ENERJİ"), ("KONYA", "ÇİMENTO"), 
 ]
 
 BENCHMARK   = "XU100.IS"
