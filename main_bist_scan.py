@@ -67,8 +67,8 @@ def fetch_bars(symbol, tf, days=60):
     return df
 
 
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
-TELEGRAM_CHAT_ID   = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+TELEGRAM_BOT_TOKEN = ""  # Telegram bildirimi KAPALI — bu scriptler sadece results_*.json'a yazar
+TELEGRAM_CHAT_ID   = ""  # sorgular Claude Code uzerinden results_*.json okunarak cevaplanir
 STATE_FILE_PATH    = os.environ.get("STATE_FILE_PATH", "state_bist_scan.json")
 RESULTS_FILE_PATH  = os.environ.get("RESULTS_FILE_PATH", "results_bist.json")
 
@@ -79,15 +79,9 @@ TICKERS = BIST_TICKERS
 
 
 def send_telegram(message: str):
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        return
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    try:
-        r = requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "HTML"}, timeout=10)
-        if r.status_code != 200:
-            print(f"  Telegram HATA: {r.text}")
-    except Exception as e:
-        print(f"  Telegram exception: {e}")
+    # Devre disi - bu scriptler sadece tarama yapar, results_*.json'a yazar.
+    # Sorgular Claude Code uzerinden o dosya okunarak cevaplanir.
+    return
 
 
 def load_json(path, default):
@@ -449,6 +443,7 @@ def run_state_machine(df, bias_score, eli, hm, lm, diP, diM, bsl,
     if not np.isnan(nearest_bsl.iloc[-1]):
         last_bsl_note = f"{nearest_bsl.iloc[-1]:.1f}x" if bool(bsl_risk.iloc[-1]) else "risk yok"
     last_event = events[-1] if events else None
+    bars_ago = (n - 1 - last_event[0]) if last_event else None
     return {
         "events": events,
         "in_position": in_position,
@@ -458,7 +453,8 @@ def run_state_machine(df, bias_score, eli, hm, lm, diP, diM, bsl,
         "last_bsl_note": last_bsl_note,
         "last_pdh_pdl_risk": bool(recent_pdh_pdl.iloc[-1]),
         "last_strong_candle": bool(strong_candle.iloc[-1]),
-        "last_event": {"type": last_event[2], "time": str(last_event[1]), "price": round(float(last_event[3]), 4)} if last_event else None,
+        "last_event": ({"type": last_event[2], "time": str(last_event[1]), "price": round(float(last_event[3]), 4),
+                         "bars_ago": bars_ago} if last_event else None),
     }
 TITLE = "ARGUS BIST SCAN"
 
@@ -485,7 +481,6 @@ def run_scan():
     print(f"{len(TICKERS)} ticker x {len(FIXED_TFS)} TF = {len(TICKERS) * len(FIXED_TFS)} kombinasyon")
     print(f"{'=' * 65}")
 
-    dedup_state = load_json(STATE_FILE_PATH, {})
     results_snapshot = {}
     entry_armed_list = []
     in_trade_list = []
@@ -519,19 +514,8 @@ def run_scan():
             elif r["status"] == "IN_TRADE":
                 in_trade_list.append(f"{ticker} ({tf}) bias={r['last_bias']}")
 
-            last_event = r["last_event"]
-            if last_event and last_event["type"] in ("BUY", "SELL", "STOP", "VETO"):
-                prev_notified = dedup_state.get(key)
-                if prev_notified != last_event["time"]:
-                    dedup_state[key] = last_event["time"]
-                    if prev_notified is not None:
-                        icon = {"BUY": "\u2705", "SELL": "\U0001F534", "STOP": "\U0001F534", "VETO": "\u26A0\uFE0F"}.get(last_event["type"], "")
-                        send_telegram(f"{icon} <b>{last_event['type']} - {ticker} ({tf})</b>\n"
-                                      f"Fiyat: {last_event['price']} | Bias: {r['last_bias']}\n{TITLE}")
-
             print(f"  {ticker:10s} {tf:4s} {r['status']:12s} bias={r['last_bias']:6.1f} price={r['price']}")
 
-    save_json(STATE_FILE_PATH, dedup_state)
     save_json(RESULTS_FILE_PATH, {
         "scan_time": now.isoformat(),
         "entry_armed": entry_armed_list,
@@ -555,7 +539,6 @@ def main():
     except Exception as e:
         error_detail = traceback.format_exc()
         print(f"BEKLENMEDIK HATA: {e}\n{error_detail}")
-        send_telegram(f"\u26A0\uFE0F {TITLE}'de bir hata olustu, sonraki cron'da tekrar denenecek.")
 
 if __name__ == "__main__":
     main()
