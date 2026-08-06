@@ -526,7 +526,7 @@ def run_state_machine(df, bias_score, eli, hm, lm, diP, diM, levels=None, pdh_pd
             events.append((i, df.index[i], "SELL", close[i]))
             in_position = False; entry_price = None; entry_idx = None
             entry_armed = False; exit_armed = False
-        elif bsl_veto:
+        elif bsl_veto and not in_position:
             events.append((i, df.index[i], "VETO", close[i]))
 
     status = "IN_TRADE" if in_position else ("ENTRY_ARMED" if entry_armed else "WAIT")
