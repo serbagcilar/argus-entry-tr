@@ -111,7 +111,7 @@ STOP_PCT          = 4.7
 RS_PERIOD         = 20
 
 HL_U       = 20
-HL_K       = 1.5
+K_FRAC     = 0.6  # v18.3: sabit-yuzde (HL_K) yerine range-bazli bant genisligi
 ELI_ALPHA1 = 0.33
 ELI_ALPHA2 = 0.25
 
@@ -200,7 +200,7 @@ def compute_bias_score_series(df, bench_df, rs_period=RS_PERIOD):
     return pd.Series(total, index=df.index).astype(float)
 
 
-def compute_eli_hm_lm(df, hl_u=HL_U, hl_k=HL_K, alpha1=ELI_ALPHA1, alpha2=ELI_ALPHA2):
+def compute_eli_hm_lm(df, hl_u=HL_U, k_frac=K_FRAC, alpha1=ELI_ALPHA1, alpha2=ELI_ALPHA2):
     high, low, close = df["High"].values, df["Low"].values, df["Close"].values
     n = len(df)
 
@@ -216,9 +216,9 @@ def compute_eli_hm_lm(df, hl_u=HL_U, hl_k=HL_K, alpha1=ELI_ALPHA1, alpha2=ELI_AL
             r[i] = d * e * (data[i] - r[i - 1]) + r[i - 1]
         return r
 
-    def f_ott(data, mult):
-        a = mult / 100
-        b = data * a
+    def f_ott_range(data, range_val, frac):
+        b = range_val * frac
+        a = np.where(data != 0, b / data, 0.0)
         c = data - b
         dd = data + b
         for i in range(1, n):
@@ -237,9 +237,10 @@ def compute_eli_hm_lm(df, hl_u=HL_U, hl_k=HL_K, alpha1=ELI_ALPHA1, alpha2=ELI_AL
 
     highest_u = pd.Series(high).rolling(hl_u).max().bfill().values
     lowest_u  = pd.Series(low).rolling(hl_u).min().bfill().values
+    range_u   = highest_u - lowest_u
 
-    hm = f_ott(f_var(highest_u), hl_k)
-    lm = f_ott(f_var(lowest_u), hl_k)
+    hm = f_ott_range(f_var(highest_u), range_u, k_frac)
+    lm = f_ott_range(f_var(lowest_u), range_u, k_frac)
 
     lead = np.zeros(n); eli = np.zeros(n)
     lead[0] = close[0]; eli[0] = close[0]

@@ -55,7 +55,8 @@ DI_RATIO_MAX     = 5
 STOP_PCT         = 5.0
 RS_PERIOD        = 20
 HL_U             = 20
-HL_K             = 1.5
+K_FRAC           = 0.6  # v18.3: sabit-yuzde (HL_K) yerine range-bazli bant genisligi -
+                         # Pine'da Strategy Tester ile dogrulandi (GOOGL, k_frac=0.6)
 ELI_ALPHA1       = 0.33
 ELI_ALPHA2       = 0.25
 BENCHMARK_DEFAULT = "XU100.IS"
@@ -247,7 +248,7 @@ def compute_bias_score_series(df: pd.DataFrame, bench_df: pd.DataFrame, rs_perio
 # ============================================================
 # 2) ELI / HM / LM -- Pine'daki f_var / f_ott ile birebir (IIR filtre, bar-bar)
 # ============================================================
-def compute_eli_hm_lm(df: pd.DataFrame, hl_u=HL_U, hl_k=HL_K, alpha1=ELI_ALPHA1, alpha2=ELI_ALPHA2):
+def compute_eli_hm_lm(df: pd.DataFrame, hl_u=HL_U, k_frac=K_FRAC, alpha1=ELI_ALPHA1, alpha2=ELI_ALPHA2):
     high, low, close = df["High"].values, df["Low"].values, df["Close"].values
     n = len(df)
 
@@ -263,9 +264,12 @@ def compute_eli_hm_lm(df: pd.DataFrame, hl_u=HL_U, hl_k=HL_K, alpha1=ELI_ALPHA1,
             r[i] = d * e * (data[i] - r[i-1]) + r[i-1]
         return r
 
-    def f_ott(data: np.ndarray, mult: float) -> np.ndarray:
-        a = mult / 100
-        b = data * a
+    def f_ott_range(data: np.ndarray, range_val: np.ndarray, frac: float) -> np.ndarray:
+        # v18.3: bant genisligi artik fiyatin sabit yuzdesi degil, son hl_u
+        # barin kendi (highest-lowest) range'inin bir kesri - Pine f_ott_range
+        # ile birebir ayni (bkz. AEI_v18_3.pine).
+        b = range_val * frac
+        a = np.where(data != 0, b / data, 0.0)
         c = data - b
         dd = data + b
         for i in range(1, n):
@@ -284,9 +288,10 @@ def compute_eli_hm_lm(df: pd.DataFrame, hl_u=HL_U, hl_k=HL_K, alpha1=ELI_ALPHA1,
 
     highest_u = pd.Series(high).rolling(hl_u).max().bfill().values
     lowest_u  = pd.Series(low).rolling(hl_u).min().bfill().values
+    range_u   = highest_u - lowest_u
 
-    hm = f_ott(f_var(highest_u), hl_k)
-    lm = f_ott(f_var(lowest_u), hl_k)
+    hm = f_ott_range(f_var(highest_u), range_u, k_frac)
+    lm = f_ott_range(f_var(lowest_u), range_u, k_frac)
 
     lead = np.zeros(n); eli = np.zeros(n)
     lead[0] = close[0]; eli[0] = close[0]
